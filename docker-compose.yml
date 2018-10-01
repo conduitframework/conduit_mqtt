@@ -1,0 +1,9 @@
+version: '2'
+services:
+  vernemq:
+    image: erlio/docker-vernemq
+    ports:
+      - 1883:1883
+
+
+  #docker run -e "DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on" --name vernemq1 -d

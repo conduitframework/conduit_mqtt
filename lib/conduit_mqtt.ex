@@ -10,6 +10,7 @@ defmodule ConduitMQTT do
   alias ConduitMQTT.Meta
 
   @type broker :: module
+  @type client_id :: String.t()
 
   @pool_size 5
 
@@ -23,7 +24,7 @@ defmodule ConduitMQTT do
 
   def start_link(broker, topology, subscribers, opts) do
     Meta.create(broker)
-    #Meta.put_setup_status(broker, :complete) #TODO; put this here for now
+    Meta.put_setup_status(broker, :complete) #TODO; put this here for now
     Supervisor.start_link(__MODULE__, [broker, topology, subscribers, opts], name: name(broker))
   end
 
@@ -48,18 +49,29 @@ defmodule ConduitMQTT do
   end
 
   def publish(broker, message, _config, opts) do
-    #exchange = Keyword.get(opts, :exchange)
     #props = ConduitMQTT.Props.get(message) #TODO MQTT opts
 
-    Tortoise.publish("1", message.destination, message.body,  qos: 0)
+    with_client_id(broker, fn client_id ->
+      Logger.info("Publishing from client_id #{client_id}")
+      Tortoise.publish_sync(client_id, message.destination, message.body,  qos: 0)
+    end)
   end
 
+  @spec with_client_id(broker, (client_id -> term)) :: {:error, term} | {:ok, term} | term
+  def with_client_id(broker, fun) when is_function(fun, 1) do
+    with {:ok, client_id} <- get_client_id(broker, @pool_size) do
+      fun.(client_id)
+    end
+  end
+
+
   @doc false
-  defp get_conn(broker, retries) do
+  defp get_client_id(broker, retries) do
     pool = ConduitMQTT.ConnPool.name(broker)
 
     Util.retry([attempts: retries], fn ->
-      :poolboy.transaction(pool, &GenServer.call(&1, :conn))
-    end)
+        :poolboy.transaction(pool, &ConduitMQTT.Conn.get_client_id(&1))
+      end
+    )
   end
 end

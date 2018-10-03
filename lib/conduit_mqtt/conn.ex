@@ -2,61 +2,70 @@ defmodule ConduitMQTT.Conn do
   @moduledoc """
   Manages an Tortoise connection
   """
-  use Connection
+  use GenServer
   require Logger
+  alias ConduitMQTT.Util
 
-  @reconnect_after_ms 5_000
-
+  ## Client API
   def start_link(opts \\ []) do
-    Connection.start_link(__MODULE__, opts)
+    GenServer.start_link(__MODULE__, opts)
   end
 
+  def get_client_id(server) do
+    GenServer.call(server, :get_client_id)
+  end
+
+  ## Server Callbacks
   def init(opts) do
-    Process.flag(:trap_exit, true)
-    {:connect, :init, %{opts: opts, conn: nil}}
+    #Process.flag(:trap_exit, true) #TODO what does this do?
+    #send(self(), :make_connection) #TODO problem is if I make this a message then im not ready when people try to use me, need to block
+    {:ok, state} = do_connect(%{opts: opts})
+    {:ok, state}
   end
 
-  def handle_call(:conn, _from, %{conn: nil} = status) do
-    {:reply, {:error, :disconnected}, status}
+  def handle_info(:make_connection, state) do
+    do_connect(state)
+    {:noreply, state}
   end
 
-  def handle_call(:conn, _from, %{conn: conn} = status) do
-    {:reply, {:ok, conn}, status}
+  def handle_call(:get_client_id, _from, state) do
+    client_id = get_client_id_from_state(state)
+    {:reply, {:ok, client_id}, state}
   end
 
-  def connect(_, state) do
-    client_id = String.slice(UUID.uuid4(:hex), 0, 22)
+  defp do_connect(state) do
 
-    connect_opts = Keyword.get(state.opts, :connection_opts, state.opts)
+    client_id = generate_client_id()
+    state = put_in(state[:opts][:connection_opts][:client_id], client_id)
 
-    connect_opts = Keyword.put(connect_opts, :client_id, client_id)
-    case Tortoise.Connection.start_link(connect_opts) do
+    connection_opts = get_connection_opts_from_state(state)
+    case Tortoise.Connection.start_link(connection_opts) do
       {:ok, pid} ->
-        Logger.info("#{inspect(self())} Connected via MQTT! with client_id:#{client_id}")
-        Process.monitor(pid)
-        {:ok, %{state | conn: client_id}}
+        Logger.info("#{inspect(self())} Trying to connect via MQTT! with client_id:#{client_id}")
+        {:ok, state}
 
       {:error, reason} ->
         Logger.error("#{inspect(self())} Connection failed via MQTT! #{inspect(reason)}")
-        {:backoff, @reconnect_after_ms, state}
+        {:error, state}
     end
   end
 
-  def handle_info({:DOWN, _ref, :process, pid, reason}, %{conn: %{pid: conn_pid}} = state)
-      when pid == conn_pid do
-    Logger.error("#{inspect(self())} Lost MQTT connection, because #{inspect(reason)}")
-    Logger.info("#{inspect(self())} Attempting to reconnect...")
-    {:connect, :reconnect, %{state | conn: nil}}
+  defp get_client_id_from_state(state) do
+    state
+    |> get_connection_opts_from_state()
+    |> Keyword.get(:client_id)
   end
 
-  def terminate(_reason, %{conn: nil}), do: :ok
+  defp get_connection_opts_from_state(state) do
+    Keyword.get(state.opts, :connection_opts)
+  end
 
-  def terminate(_reason, %{conn: client_id}) do
-    Logger.info("#{inspect(self())} MQTT connection terminating")
+  defp generate_client_id() do
+    allowed_chars = Enum.concat([?0..?9, ?A..?Z, ?a..?z])
+    random_char = fn  -> Enum.random(allowed_chars) end
 
-    Tortoise.Connection.disconnect(client_id)
-  catch
-    _, _ ->
-      :ok
+    Stream.repeatedly(random_char)
+    |> Enum.take(22)
+    |> List.to_string()
   end
 end

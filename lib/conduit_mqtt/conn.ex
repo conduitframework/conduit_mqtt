@@ -7,6 +7,18 @@ defmodule ConduitMQTT.Conn do
   alias ConduitMQTT.Util
 
   ## Client API
+  def child_spec([broker, name, opts] = args) do
+    %{
+      id: name(broker, name),
+      start: {__MODULE__, :start_link, [opts]},
+      type: :worker
+    }
+  end
+
+  def name(broker, queue) do
+    {Module.concat(broker, Adapter.Sub), queue}
+  end
+
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts)
   end

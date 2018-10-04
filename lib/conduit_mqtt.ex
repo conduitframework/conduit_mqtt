@@ -8,6 +8,7 @@ defmodule ConduitMQTT do
   require Logger
   alias ConduitMQTT.Util
   alias ConduitMQTT.Meta
+  alias Conduit.Message
 
   @type broker :: module
   @type client_id :: String.t()
@@ -32,7 +33,8 @@ defmodule ConduitMQTT do
     Logger.info("MQTT Adapter started!")
 
     children = [
-      {ConduitMQTT.ConnPool, [broker, opts]}
+      {ConduitMQTT.ConnPool, [broker, opts]}, #TODO rename to PubPool
+      {ConduitMQTT.SubPool, [broker, subscribers, opts]},
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
@@ -50,10 +52,10 @@ defmodule ConduitMQTT do
 
   def publish(broker, message, _config, opts) do
     #props = ConduitMQTT.Props.get(message) #TODO MQTT opts
-
     with_client_id(broker, fn client_id ->
-      Logger.info("Publishing from client_id #{client_id}")
-      Tortoise.publish_sync(client_id, message.destination, message.body,  qos: 0)
+      qos = Message.get_header(message, "qos")
+      Logger.info("Publishing from client_id #{client_id} to #{message.destination} with qos #{qos}")
+      Tortoise.publish_sync(client_id, message.destination, message.body, [qos: qos]) #TODO: how to do qos
     end)
   end
 

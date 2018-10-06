@@ -4,7 +4,6 @@ defmodule ConduitMQTT.Handler do
   import Conduit.Message
   require Logger
 
-
   def init([client_id: client_id, broker: broker, name: name, opts: opts] = args) do
     {:ok, args}
   end
@@ -20,13 +19,23 @@ defmodule ConduitMQTT.Handler do
   end
 
   def handle_message(topic, payload, [client_id: client_id, broker: broker, name: name, opts: opts] = state) do
-    Logger.debug("Subscriber #{name} on broker #{inspect(broker)} client_id #{client_id} got message: #{inspect(payload)} on topic: #{inspect(topic)}")
+    Logger.debug(
+      "Subscriber #{name} on broker #{inspect(broker)} client_id #{client_id} got message: #{inspect(payload)} on topic: #{
+        inspect(topic)
+      }"
+    )
+
     :ok = reply(broker, name, topic, payload, opts)
     {:ok, state}
   end
 
-  def subscription(status, topic_filter,[client_id: client_id, broker: broker, name: name, opts: _opts] =  state) do
-    Logger.debug("Subscription #{name} on broker #{inspect(broker)} client_id #{client_id} topic filter #{topic_filter} is #{status}")
+  def subscription(status, topic_filter, [client_id: client_id, broker: broker, name: name, opts: _opts] = state) do
+    Logger.debug(
+      "Subscription #{name} on broker #{inspect(broker)} client_id #{client_id} topic filter #{topic_filter} is #{
+        status
+      }"
+    )
+
     ConduitMQTT.Meta.put_subscription_status(broker, name, status)
     {:ok, state}
   end
@@ -57,7 +66,8 @@ defmodule ConduitMQTT.Handler do
     %Message{}
     |> put_source(topic)
     |> put_body(payload)
-    |> put_header("routing_key", Enum.join(topic,"/"))
-    #|> Props.put(props)
+    |> put_header("routing_key", Enum.join(topic, "/"))
+
+    # |> Props.put(props)
   end
 end

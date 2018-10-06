@@ -11,16 +11,17 @@ defmodule ConduitMQTT.Meta do
 
   @spec create(broker, pool_size, sub_count) :: atom
   def create(broker, pool_size, sub_count) do
-    broker
-    |> meta_name()
+    table =
+      broker
+      |> meta_name()
+
+    table
     |> :ets.new([:set, :public, :named_table])
 
-    broker
-    |> meta_name()
+    table
     |> :ets.insert({:client_count, pool_size + sub_count})
 
-    broker
-    |> meta_name()
+    table
     |> :ets.insert({:subscriber_count, sub_count})
   end
 
@@ -51,7 +52,6 @@ defmodule ConduitMQTT.Meta do
     insert_subscription_status(broker, subscription, status)
   end
 
-
   @spec get_client_id_status(broker, client_id) :: status
   def get_client_id_status(broker, client_id) do
     lookup_client_id_status(broker, client_id)
@@ -59,7 +59,7 @@ defmodule ConduitMQTT.Meta do
 
   def get_all(broker) do
     table = meta_name(broker)
-    :ets.match(table,{:"$1",:"$2"})
+    :ets.match(table, {:"$1", :"$2"})
   end
 
   defp meta_name(broker) do
@@ -106,12 +106,12 @@ defmodule ConduitMQTT.Meta do
     |> meta_name()
     |> :ets.lookup(client_id)
     |> case do
-         [] ->
-           fallback.()
+      [] ->
+        fallback.()
 
-         [{_, status} | _] ->
-           status
-       end
+      [{_, status} | _] ->
+        status
+    end
   end
 
   defp update_broker_status(broker) do
@@ -119,9 +119,12 @@ defmodule ConduitMQTT.Meta do
     [{_, client_count}] = :ets.lookup(meta_name(broker), :client_count)
     [{_, subscriber_count}] = :ets.lookup(meta_name(broker), :subscriber_count)
 
-    things_up = :ets.match(table,{:"$1",:up})
-    count_of_things_up = Enum.count(things_up)
-    Logger.debug("Broker #{broker} has #{count_of_things_up} of #{client_count + subscriber_count} clients and subscriptions up")
+    count_of_things_up = :ets.select_count(table, [{{:"$1", :up}, [], [true]}])
+
+    Logger.debug(
+      "Broker #{broker} has #{count_of_things_up} of #{client_count + subscriber_count} clients and subscriptions up"
+    )
+
     if count_of_things_up == client_count + subscriber_count do
       Logger.info("Marking broker #{broker} up")
       put_setup_status(broker, :complete)
@@ -131,8 +134,11 @@ defmodule ConduitMQTT.Meta do
   def key_stream(table_name) do
     Stream.resource(
       fn -> :ets.first(table_name) end,
-      fn :"$end_of_table" -> {:halt, nil}
-        previous_key -> {[previous_key], :ets.next(table_name, previous_key)} end,
-      fn _ -> :ok end)
+      fn
+        :"$end_of_table" -> {:halt, nil}
+        previous_key -> {[previous_key], :ets.next(table_name, previous_key)}
+      end,
+      fn _ -> :ok end
+    )
   end
 end

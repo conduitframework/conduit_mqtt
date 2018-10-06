@@ -8,14 +8,10 @@ defmodule ConduitMQTT.EventLogger do
   ## Client API
   def child_spec(args) do
     %{
-      id: name(),
+      id: ConduitMQTT.EventLogger,
       start: {__MODULE__, :start_link, [args]},
       type: :worker
     }
-  end
-
-  def name() do
-    Module.concat("", ConduitMQTT.EventLogger)
   end
 
   def start_link(opts \\ []) do
@@ -24,7 +20,7 @@ defmodule ConduitMQTT.EventLogger do
 
   ## Server Callbacks
   def init(opts) do
-    Tortoise.Events.register(:_,:status)
+    Tortoise.Events.register(:_, :status)
     {:ok, opts}
   end
 

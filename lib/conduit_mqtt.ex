@@ -8,7 +8,6 @@ defmodule ConduitMQTT do
   require Logger
   alias ConduitMQTT.Util
   alias ConduitMQTT.Meta
-  alias Conduit.Message
 
   @type broker :: module
   @type client_id :: String.t()
@@ -24,17 +23,16 @@ defmodule ConduitMQTT do
   end
 
   def start_link(broker, topology, subscribers, opts) do
-    Meta.create(broker)
-    Meta.put_setup_status(broker, :complete) #TODO; put this here for now
+    Meta.create(broker, @pool_size, Enum.count(Map.keys(subscribers)) )
     Supervisor.start_link(__MODULE__, [broker, topology, subscribers, opts], name: name(broker))
   end
 
-  def init([broker, topology, subscribers, opts]) do
+  def init([broker, _topology, subscribers, opts]) do
     Logger.info("MQTT Adapter started!")
 
     children = [
-      {ConduitMQTT.ConnPool, [broker, opts]}, #TODO rename to PubPool
       {ConduitMQTT.SubPool, [broker, subscribers, opts]},
+      {ConduitMQTT.ConnPool, [broker, opts]} #TODO rename to PubPool
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
@@ -52,10 +50,10 @@ defmodule ConduitMQTT do
 
   def publish(broker, message, _config, opts) do
     #props = ConduitMQTT.Props.get(message) #TODO MQTT opts
+
     with_client_id(broker, fn client_id ->
-      qos = Message.get_header(message, "qos")
-      Logger.info("Publishing from client_id #{client_id} to #{message.destination} with qos #{qos}")
-      Tortoise.publish_sync(client_id, message.destination, message.body, [qos: qos]) #TODO: how to do qos
+      Logger.debug("Publishing from broker #{broker} client_id #{client_id} to #{message.destination} with opts #{inspect(opts)}")
+      Tortoise.publish_sync(client_id, message.destination, message.body, opts)
     end)
   end
 
@@ -65,7 +63,6 @@ defmodule ConduitMQTT do
       fun.(client_id)
     end
   end
-
 
   @doc false
   defp get_client_id(broker, retries) do

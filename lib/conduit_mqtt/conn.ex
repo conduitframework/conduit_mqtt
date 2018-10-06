@@ -4,13 +4,12 @@ defmodule ConduitMQTT.Conn do
   """
   use GenServer
   require Logger
-  alias ConduitMQTT.Util
 
   ## Client API
-  def child_spec([broker, name, opts] = args) do
+  def child_spec([broker: broker, name: name, opts: _] = args) do
     %{
       id: name(broker, name),
-      start: {__MODULE__, :start_link, [opts]},
+      start: {__MODULE__, :start_link, [args]},
       type: :worker
     }
   end
@@ -30,13 +29,13 @@ defmodule ConduitMQTT.Conn do
   ## Server Callbacks
   def init(opts) do
     #Process.flag(:trap_exit, true) #TODO what does this do?
-    #send(self(), :make_connection) #TODO problem is if I make this a message then im not ready when people try to use me, need to block
-    {:ok, state} = do_connect(%{opts: opts})
-    {:ok, state}
+    send(self(), :make_connection)
+    #{:ok, state} = do_connect(%{opts: opts}) #syncrnous but doesn't help, connection still not ready on return
+    {:ok, opts}
   end
 
   def handle_info(:make_connection, state) do
-    do_connect(state)
+    {:ok, state} = do_connect(state)
     {:noreply, state}
   end
 
@@ -45,14 +44,16 @@ defmodule ConduitMQTT.Conn do
     {:reply, {:ok, client_id}, state}
   end
 
-  defp do_connect(state) do
-
+  defp do_connect([broker: broker, name: name, opts: opts] = state) do
     client_id = generate_client_id()
+
     state = put_in(state[:opts][:connection_opts][:client_id], client_id)
+
+    state = put_in(state[:opts][:connection_opts][:handler],{ConduitMQTT.Handler, [client_id: client_id, broker: broker, name: name, opts: opts]})
 
     connection_opts = get_connection_opts_from_state(state)
     case Tortoise.Connection.start_link(connection_opts) do
-      {:ok, pid} ->
+      {:ok, _pid} ->
         Logger.info("#{inspect(self())} Trying to connect via MQTT! with client_id:#{client_id}")
         {:ok, state}
 
@@ -69,7 +70,7 @@ defmodule ConduitMQTT.Conn do
   end
 
   defp get_connection_opts_from_state(state) do
-    Keyword.get(state.opts, :connection_opts)
+    Keyword.get(state[:opts], :connection_opts)
   end
 
   defp generate_client_id() do

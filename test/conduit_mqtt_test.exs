@@ -1,10 +1,12 @@
 defmodule ConduitMQTTTest do
   @moduledoc false
   use ExUnit.Case, async: false
+  require Logger
 
   defmodule Broker do
     @moduledoc false
     def receives(_name, message) do
+      Logger.info("recieved #{inspect(message)}")
       send(ConduitMQTTTest, {:broker, message})
 
       message
@@ -14,6 +16,7 @@ defmodule ConduitMQTTTest do
   defmodule OtherBroker do
     @moduledoc false
     def receives(_name, message) do
+      Logger.info("recieved #{inspect(message)}")
       send(ConduitMQTTTest, {:broker, message})
 
       message
@@ -42,40 +45,35 @@ defmodule ConduitMQTTTest do
     :ok
   end
 
-#  test "can make a connection at all" do
-#    Tortoise.Supervisor.start_child(
-#      client_id: "my_client_id",
-#      handler: {Tortoise.Handler.Logger, []},
-#      server: {Tortoise.Transport.Tcp, host: 'localhost', port: 1883},
-#      subscriptions: [{"foo/bar3", 0}])
-#
-#    Tortoise.publish("my_client_id", "foo/bar3", "Hello from the World of Tomorrow !", qos: 0)
-#  end
-#
-#  test "can make a connection with opts" do
-#    opts = Application.get_env(:conduit, ConduitMQTTTest)
-#    |> Keyword.get(:connection_opts)
-#    |> Keyword.put(:client_id, "blah1")
-#    |> Tortoise.Supervisor.start_child()
-#  end
-
   test "a sent message can be received" do
     import Conduit.Message
-    Process.sleep(1000) #TODO this is just so the pool can be setup in time for tests
     message =
       %Conduit.Message{}
       |> put_destination("foo/bar1") #topic
-      |> put_header("qos", 0)
       |> put_body("test")
 
-
-    ConduitMQTT.publish(Broker, message, [], [])
+    ConduitMQTT.publish(Broker, message, [], qos: 0, retain: false, timeout: 1)
 
     assert_receive {:broker, received_message}
 
-    assert received_message.source == ["foo","bar1"] #topic pattern
+    assert received_message.source == ["foo", "bar1"] #topic pattern
     assert get_header(received_message, "routing_key") == "foo/bar1"
     assert received_message.body == "test"
+  end
+
+  test "can run two adapters at the same time" do
+    import Conduit.Message
+
+    message =
+      %Conduit.Message{}
+      |> put_destination("foo/bar1")
+      |> put_body("test")
+
+    ConduitMQTT.publish(Broker, message, [], [])
+    ConduitMQTT.publish(OtherBroker, message, [], [])
+
+    assert_receive {:broker, _}
+    assert_receive {:broker, _}
   end
 
 end

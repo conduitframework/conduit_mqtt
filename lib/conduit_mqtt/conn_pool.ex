@@ -15,7 +15,7 @@ defmodule ConduitMQTT.ConnPool do
       max_overflow: 0
     ]
 
-    :poolboy.child_spec(pool_name, conn_pool_opts, opts)
+    :poolboy.child_spec(pool_name, conn_pool_opts, [broker: broker, name: "pub_pool_member", opts: opts])
   end
 
   def name(broker) do

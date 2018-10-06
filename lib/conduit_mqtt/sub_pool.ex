@@ -19,13 +19,8 @@ defmodule ConduitMQTT.SubPool do
   def init([broker, subscribers, adapter_opts]) do
     children =
       Enum.map(subscribers, fn {name, opts} ->
-        subscriber_name = name
-        subscriber_opts = opts
-        from = opts[:from]
-        qos = opts[:qos]
-        adapter_opts = put_in(adapter_opts[:connection_opts][:subscriptions], [{from, qos}])
-        adapter_opts = put_in(adapter_opts[:connection_opts][:handler], {ConduitMQTT.Handler, [broker: broker, name: name, opts: opts]})
-        {ConduitMQTT.Conn, [broker, name, opts ++ adapter_opts]}
+        adapter_opts = put_in(adapter_opts[:connection_opts][:subscriptions], [{opts[:from], opts[:qos]}])
+        {ConduitMQTT.Conn, [broker: broker, name: name, opts: opts ++ adapter_opts]}
       end)
 
     Supervisor.init(children, strategy: :one_for_one)

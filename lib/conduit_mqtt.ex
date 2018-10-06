@@ -8,7 +8,6 @@ defmodule ConduitMQTT do
   require Logger
   alias ConduitMQTT.Util
   alias ConduitMQTT.Meta
-  alias Conduit.Message
 
   @type broker :: module
   @type client_id :: String.t()
@@ -24,17 +23,21 @@ defmodule ConduitMQTT do
   end
 
   def start_link(broker, topology, subscribers, opts) do
-    Meta.create(broker)
-    Meta.put_setup_status(broker, :complete) #TODO; put this here for now
+    Meta.create(broker, @pool_size, Enum.count(Map.keys(subscribers)))
     Supervisor.start_link(__MODULE__, [broker, topology, subscribers, opts], name: name(broker))
   end
 
   def init([broker, topology, subscribers, opts]) do
+    if !Enum.empty?(topology) do
+      Logger.warn("Topology should be empty list for MQTT Adapter")
+    end
+
     Logger.info("MQTT Adapter started!")
 
     children = [
-      {ConduitMQTT.ConnPool, [broker, opts]}, #TODO rename to PubPool
       {ConduitMQTT.SubPool, [broker, subscribers, opts]},
+      # TODO rename to PubPool
+      {ConduitMQTT.ConnPool, [broker, opts]}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
@@ -51,11 +54,10 @@ defmodule ConduitMQTT do
   end
 
   def publish(broker, message, _config, opts) do
-    #props = ConduitMQTT.Props.get(message) #TODO MQTT opts
+    # props = ConduitMQTT.Props.get(message) #TODO MQTT opts
+
     with_client_id(broker, fn client_id ->
-      qos = Message.get_header(message, "qos")
-      Logger.info("Publishing from client_id #{client_id} to #{message.destination} with qos #{qos}")
-      Tortoise.publish_sync(client_id, message.destination, message.body, [qos: qos]) #TODO: how to do qos
+      Tortoise.publish_sync(client_id, message.destination, message.body, opts)
     end)
   end
 
@@ -66,14 +68,12 @@ defmodule ConduitMQTT do
     end
   end
 
-
   @doc false
   defp get_client_id(broker, retries) do
     pool = ConduitMQTT.ConnPool.name(broker)
 
     Util.retry([attempts: retries], fn ->
-        :poolboy.transaction(pool, &ConduitMQTT.Conn.get_client_id(&1))
-      end
-    )
+      :poolboy.transaction(pool, &ConduitMQTT.Conn.get_client_id(&1))
+    end)
   end
 end

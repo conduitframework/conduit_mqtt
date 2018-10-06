@@ -9,6 +9,5 @@ config :lager, :error_logger_redirect, false
 config :lager, :error_logger_whitelist, [Logger.ErrorHandler]
 
 if Mix.env() == :test do
-  config :conduit, ConduitMQTTTest,
-         connection_opts: [handler: {Tortoise.Handler.Logger, []}, server: {Tortoise.Transport.Tcp, host: 'localhost', port: 1883}]
+  config :conduit, ConduitMQTTTest, connection_opts: [server: {Tortoise.Transport.Tcp, host: 'localhost', port: 1883}]
 end

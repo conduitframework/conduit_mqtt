@@ -7,7 +7,6 @@ defmodule ConduitMQTT do
   use Supervisor
   require Logger
   alias ConduitMQTT.Util
-  alias ConduitMQTT.Meta
 
   @type broker :: module
   @type client_id :: String.t()
@@ -23,7 +22,7 @@ defmodule ConduitMQTT do
   end
 
   def start_link(broker, topology, subscribers, opts) do
-    Meta.create(broker, @pool_size, Enum.count(Map.keys(subscribers)))
+    #Meta.create(broker, @pool_size, Enum.count(Map.keys(subscribers)))
     Supervisor.start_link(__MODULE__, [broker, topology, subscribers, opts], name: name(broker))
   end
 
@@ -35,8 +34,8 @@ defmodule ConduitMQTT do
     Logger.info("MQTT Adapter started!")
 
     children = [
+      {ConduitMQTT.Meta, [broker, @pool_size, Enum.count(Map.keys(subscribers))]},
       {ConduitMQTT.SubPool, [broker, subscribers, opts]},
-      # TODO rename to PubPool
       {ConduitMQTT.ConnPool, [broker, opts]}
     ]
 

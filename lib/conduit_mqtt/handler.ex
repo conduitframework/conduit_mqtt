@@ -4,7 +4,7 @@ defmodule ConduitMQTT.Handler do
   import Conduit.Message
   require Logger
 
-  def init([client_id: client_id, broker: broker, name: name, opts: opts] = args) do
+  def init(args) do
     {:ok, args}
   end
 
@@ -19,12 +19,6 @@ defmodule ConduitMQTT.Handler do
   end
 
   def handle_message(topic, payload, [client_id: client_id, broker: broker, name: name, opts: opts] = state) do
-    Logger.debug(
-      "Subscriber #{name} on broker #{inspect(broker)} client_id #{client_id} got message: #{inspect(payload)} on topic: #{
-        inspect(topic)
-      }"
-    )
-
     :ok = reply(broker, name, topic, payload, opts)
     {:ok, state}
   end

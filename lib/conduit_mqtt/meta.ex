@@ -1,6 +1,9 @@
 defmodule ConduitMQTT.Meta do
   @moduledoc false
+  use GenServer
   require Logger
+  alias ConduitMQTT.Meta
+
 
   @type broker :: atom
   @type status :: :incomplete | :complete
@@ -9,14 +12,68 @@ defmodule ConduitMQTT.Meta do
   @type sub_count :: Integer.t()
   @type subscription :: String.t()
 
+  ## Client API
+  def child_spec([broker, _, _] = args) do
+    %{
+      id: meta_name(broker),
+      start: {__MODULE__, :start_link, [args]},
+      type: :worker
+    }
+  end
+
+  def start_link([broker, _, _] = opts \\ []) do
+    GenServer.start_link(__MODULE__, opts, name: meta_name(broker))
+  end
+
+  @spec get_setup_status(broker) :: status
+  def get_setup_status(broker) do
+    GenServer.call(meta_name(broker), {:get_setup_status, broker})
+  end
+
+  @spec put_client_id_status(broker, client_id, status) :: boolean
+  def put_client_id_status(broker, client_id, status) do
+    GenServer.cast(meta_name(broker), {:put_client_id_status, broker, client_id, status})
+  end
+
+  @spec put_subscription_status(broker, subscription, status) :: boolean
+  def put_subscription_status(broker, subscription, status) do
+    GenServer.cast(meta_name(broker), {:put_subscription_status, broker, subscription, status})
+  end
+
+  ## Server Callbacks
+  def init(opts) do
+    # Process.flag(:trap_exit, true) #TODO what does this do?
+    send(self(), :setup_table)
+    {:ok, opts}
+  end
+
+  def handle_info(:setup_table,  [broker, pool_size, sub_count] = state) do
+    create(broker, pool_size, sub_count)
+    {:noreply, state}
+  end
+
+  def handle_cast({:put_client_id_status, broker, client_id, status}, state) do
+    insert_client_id_status(broker, client_id, status)
+    {:noreply, state}
+  end
+
+  def handle_cast({:put_subscription_status, broker, subscriber_name, status}, state) do
+    insert_subscription_status(broker, subscriber_name, status)
+    {:noreply, state}
+  end
+
+  def handle_call({:get_setup_status, broker}, _from, state) do
+    {:reply, lookup_status(broker, :setup), state}
+  end
+
   @spec create(broker, pool_size, sub_count) :: atom
-  def create(broker, pool_size, sub_count) do
+  defp create(broker, pool_size, sub_count) do
     table =
       broker
       |> meta_name()
 
     table
-    |> :ets.new([:set, :public, :named_table])
+    |> :ets.new([:set, :private, :named_table])
 
     table
     |> :ets.insert({:client_count, pool_size + sub_count})
@@ -26,35 +83,15 @@ defmodule ConduitMQTT.Meta do
   end
 
   @spec delete(broker) :: true
-  def delete(broker) do
+  defp delete(broker) do
     broker
     |> meta_name()
     |> :ets.delete()
   end
 
   @spec put_setup_status(broker, status) :: boolean
-  def put_setup_status(broker, status) do
+  defp put_setup_status(broker, status) do
     insert_status(broker, :setup, status)
-  end
-
-  @spec get_setup_status(broker) :: status
-  def get_setup_status(broker) do
-    lookup_status(broker, :setup)
-  end
-
-  @spec put_client_id_status(broker, client_id, status) :: boolean
-  def put_client_id_status(broker, client_id, status) do
-    insert_client_id_status(broker, client_id, status)
-  end
-
-  @spec put_subscription_status(broker, subscription, status) :: boolean
-  def put_subscription_status(broker, subscription, status) do
-    insert_subscription_status(broker, subscription, status)
-  end
-
-  @spec get_client_id_status(broker, client_id) :: status
-  def get_client_id_status(broker, client_id) do
-    lookup_client_id_status(broker, client_id)
   end
 
   def get_all(broker) do
@@ -62,7 +99,7 @@ defmodule ConduitMQTT.Meta do
     :ets.match(table, {:"$1", :"$2"})
   end
 
-  defp meta_name(broker) do
+  def meta_name(broker) do
     Module.concat([broker, Meta])
   end
 
@@ -92,19 +129,6 @@ defmodule ConduitMQTT.Meta do
     broker
     |> meta_name()
     |> :ets.lookup(key)
-    |> case do
-      [] ->
-        fallback.()
-
-      [{_, status} | _] ->
-        status
-    end
-  end
-
-  defp lookup_client_id_status(broker, client_id, fallback \\ fn -> :incomplete end) do
-    broker
-    |> meta_name()
-    |> :ets.lookup(client_id)
     |> case do
       [] ->
         fallback.()

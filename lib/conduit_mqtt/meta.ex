@@ -3,7 +3,7 @@ defmodule ConduitMQTT.Meta do
   require Logger
 
   @type broker :: atom
-  @type status :: :incomplete | :complete
+  @type status :: :up | :down
   @type client_id :: String.t()
   @type pool_size :: Integer.t()
   @type sub_count :: Integer.t()
@@ -32,14 +32,9 @@ defmodule ConduitMQTT.Meta do
     |> :ets.delete()
   end
 
-  @spec put_setup_status(broker, status) :: boolean
-  def put_setup_status(broker, status) do
-    insert_status(broker, :setup, status)
-  end
-
-  @spec get_setup_status(broker) :: status
-  def get_setup_status(broker) do
-    lookup_status(broker, :setup)
+  @spec get_broker_status(broker) :: status
+  def get_broker_status(broker) do
+    do_get_broker_status(broker)
   end
 
   @spec put_client_id_status(broker, client_id, status) :: boolean
@@ -76,29 +71,12 @@ defmodule ConduitMQTT.Meta do
     broker
     |> meta_name()
     |> :ets.insert({client_id, status})
-
-    update_broker_status(broker)
   end
 
   defp insert_subscription_status(broker, subscription, status) do
     broker
     |> meta_name()
     |> :ets.insert({subscription, status})
-
-    update_broker_status(broker)
-  end
-
-  defp lookup_status(broker, key, fallback \\ fn -> :incomplete end) do
-    broker
-    |> meta_name()
-    |> :ets.lookup(key)
-    |> case do
-      [] ->
-        fallback.()
-
-      [{_, status} | _] ->
-        status
-    end
   end
 
   defp lookup_client_id_status(broker, client_id, fallback \\ fn -> :incomplete end) do
@@ -114,7 +92,7 @@ defmodule ConduitMQTT.Meta do
     end
   end
 
-  defp update_broker_status(broker) do
+  defp do_get_broker_status(broker) do
     table = meta_name(broker)
     [{_, client_count}] = :ets.lookup(meta_name(broker), :client_count)
     [{_, subscriber_count}] = :ets.lookup(meta_name(broker), :subscriber_count)
@@ -125,10 +103,9 @@ defmodule ConduitMQTT.Meta do
       "Broker #{broker} has #{count_of_things_up} of #{client_count + subscriber_count} clients and subscriptions up"
     )
 
-    if count_of_things_up == client_count + subscriber_count do
-      Logger.info("Marking broker #{broker} up")
-      put_setup_status(broker, :complete)
-    end
+    status = if (count_of_things_up == client_count + subscriber_count), do: :up, else: :down
+    Logger.debug("Broker #{broker} is #{status}")
+    status
   end
 
   def key_stream(table_name) do

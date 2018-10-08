@@ -31,8 +31,8 @@ defmodule ConduitMQTTTest do
     ConduitMQTT.start_link(OtherBroker, [], %{}, opts)
 
     ConduitMQTT.Util.wait_until(fn ->
-      ConduitMQTT.Meta.get_setup_status(Broker) == :complete &&
-        ConduitMQTT.Meta.get_setup_status(OtherBroker) == :complete
+      ConduitMQTT.Meta.get_broker_status(Broker) == :up &&
+        ConduitMQTT.Meta.get_broker_status(OtherBroker) == :up
     end)
 
     :ok

@@ -28,7 +28,7 @@ defmodule ConduitMQTT.Conn do
 
   ## Server Callbacks
   def init(opts) do
-    # Process.flag(:trap_exit, true) #TODO what does this do?
+    #Process.flag(:trap_exit, true) #TODO what does this do?
     send(self(), :make_connection)
     # {:ok, state} = do_connect(%{opts: opts}) #syncrnous but doesn't help, connection still not ready on return
     {:ok, opts}

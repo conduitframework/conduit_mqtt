@@ -32,9 +32,33 @@ defmodule ConduitMQTT.Meta do
     |> :ets.delete()
   end
 
+  @spec delete_client_id(broker, client_id) :: true
+  def delete_client_id(broker, client_id) do
+    broker
+    |> meta_name()
+    |> :ets.delete({:client, client_id})
+  end
+
+  @spec delete_subscription(broker, subscription) :: true
+  def delete_subscription(broker, subscription) do
+    broker
+    |> meta_name()
+    |> :ets.delete({:subscription, subscription})
+  end
+
   @spec get_broker_status(broker) :: status
   def get_broker_status(broker) do
-    do_get_broker_status(broker)
+    calculate_broker_status(broker)
+  end
+
+  @spec get_client_id_status(broker, client_id) :: status
+  def get_client_id_status(broker, client_id) do
+    lookup_client_id_status(broker, client_id)
+  end
+
+  @spec get_subscription_status(broker, subscription) :: status
+  def get_subscription_status(broker, subscription) do
+    lookup_subscription_status(broker, subscription)
   end
 
   @spec put_client_id_status(broker, client_id, status) :: boolean
@@ -47,9 +71,12 @@ defmodule ConduitMQTT.Meta do
     insert_subscription_status(broker, subscription, status)
   end
 
-  @spec get_client_id_status(broker, client_id) :: status
-  def get_client_id_status(broker, client_id) do
-    lookup_client_id_status(broker, client_id)
+  def get_clients(broker) do
+    lookup_clients(broker)
+  end
+
+  def get_subscriptions(broker) do
+    lookup_subscriptions(broker)
   end
 
   def get_all(broker) do
@@ -61,28 +88,22 @@ defmodule ConduitMQTT.Meta do
     Module.concat([broker, Meta])
   end
 
-  defp insert_status(broker, key, status) do
-    broker
-    |> meta_name()
-    |> :ets.insert({key, status})
-  end
-
   defp insert_client_id_status(broker, client_id, status) do
     broker
     |> meta_name()
-    |> :ets.insert({client_id, status})
+    |> :ets.insert({{:client, client_id}, status})
   end
 
   defp insert_subscription_status(broker, subscription, status) do
     broker
     |> meta_name()
-    |> :ets.insert({subscription, status})
+    |> :ets.insert({{:subscription, subscription}, status})
   end
 
-  defp lookup_client_id_status(broker, client_id, fallback \\ fn -> :incomplete end) do
+  defp lookup_client_id_status(broker, client_id, fallback \\ fn -> nil end) do
     broker
     |> meta_name()
-    |> :ets.lookup(client_id)
+    |> :ets.lookup({:client, client_id})
     |> case do
       [] ->
         fallback.()
@@ -92,18 +113,42 @@ defmodule ConduitMQTT.Meta do
     end
   end
 
-  defp do_get_broker_status(broker) do
+  defp lookup_subscription_status(broker, subscription, fallback \\ fn -> nil end) do
+    broker
+    |> meta_name()
+    |> :ets.lookup({:subscription, subscription})
+    |> case do
+         [] ->
+           fallback.()
+
+         [{_, status} | _] ->
+           status
+       end
+  end
+
+  defp lookup_clients(broker) do
+    broker
+    |> meta_name()
+    |> :ets.match({{:client, :"$1"}, :"$2"})
+  end
+
+  defp lookup_subscriptions(broker) do
+    broker
+    |> meta_name()
+    |> :ets.match({{:subscription, :"$1"}, :"$2"})
+  end
+
+  defp calculate_broker_status(broker) do
     table = meta_name(broker)
     [{_, client_count}] = :ets.lookup(meta_name(broker), :client_count)
     [{_, subscriber_count}] = :ets.lookup(meta_name(broker), :subscriber_count)
 
-    count_of_things_up = :ets.select_count(table, [{{:"$1", :up}, [], [true]}])
+    count_of_clients_up = :ets.select_count(table, [{{{:client, :"$1"}, :up}, [], [true]}])
+    count_of_subscribers_up = :ets.select_count(table, [{{{:subscription, :"$1"}, :up}, [], [true]}])
 
-    Logger.debug(
-      "Broker #{broker} has #{count_of_things_up} of #{client_count + subscriber_count} clients and subscriptions up"
-    )
+    Logger.debug("Broker #{broker} has #{count_of_clients_up} of #{client_count} clients and #{count_of_subscribers_up} of #{subscriber_count} subscriptions up")
 
-    status = if (count_of_things_up == client_count + subscriber_count), do: :up, else: :down
+    status = if (count_of_clients_up + count_of_subscribers_up == client_count + subscriber_count), do: :up, else: :down
     Logger.debug("Broker #{broker} is #{status}")
     status
   end

@@ -32,8 +32,7 @@ defmodule ConduitMQTTTest do
     ConduitMQTT.start_link(OtherBroker, [], %{}, opts)
 
     ConduitMQTT.Util.wait_until(fn ->
-      ConduitMQTT.Meta.get_broker_status(Broker) == :up &&
-        ConduitMQTT.Meta.get_broker_status(OtherBroker) == :up
+      ConduitMQTT.Meta.get_broker_status(Broker) == :up && ConduitMQTT.Meta.get_broker_status(OtherBroker) == :up
     end)
 
     :ok
@@ -77,13 +76,11 @@ defmodule ConduitMQTTTest do
 
     assert_receive {:broker, _}
     assert_receive {:broker, _}
-
   end
 
   test "broker recovers from terminating all clients and recieves a message" do
-
     clients = ConduitMQTT.Meta.get_clients(Broker)
-    Enum.each(clients, fn [client_id, _] ->  Tortoise.Connection.disconnect(client_id) end)
+    Enum.each(clients, fn [client_id, _] -> Tortoise.Connection.disconnect(client_id) end)
 
     ConduitMQTT.Util.wait_until(fn -> ConduitMQTT.Meta.get_broker_status(Broker) == :up end)
 

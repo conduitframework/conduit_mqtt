@@ -4,7 +4,7 @@ defmodule ConduitMQTT.Handler do
   import Conduit.Message
   require Logger
 
-  def init([client_id: client_id, broker: broker, name: name, opts: opts] = args) do
+  def init([client_id: _client_id, broker: _broker, name: _name, opts: _opts] = args) do
     {:ok, args}
   end
 
@@ -40,10 +40,12 @@ defmodule ConduitMQTT.Handler do
     {:ok, state}
   end
 
-  def terminate(_reason, _state) do
+  def terminate(_reason, [client_id: client_id, broker: broker, name: name, opts: _opts] = _state) do
     # tortoise doesn't care about what you return from terminate/2,
     # that is in alignment with other behaviours that implement a
     # terminate-callback
+    ConduitMQTT.Meta.delete_client_id(broker, client_id)
+    ConduitMQTT.Meta.delete_subscription(broker, name)
     :ok
   end
 

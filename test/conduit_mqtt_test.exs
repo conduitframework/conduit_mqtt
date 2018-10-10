@@ -1,6 +1,7 @@
 defmodule ConduitMQTTTest do
   @moduledoc false
   use ExUnit.Case, async: false
+  import Conduit.Message
   require Logger
 
   defmodule Broker do
@@ -31,8 +32,7 @@ defmodule ConduitMQTTTest do
     ConduitMQTT.start_link(OtherBroker, [], %{}, opts)
 
     ConduitMQTT.Util.wait_until(fn ->
-      ConduitMQTT.Meta.get_setup_status(Broker) == :complete &&
-        ConduitMQTT.Meta.get_setup_status(OtherBroker) == :complete
+      ConduitMQTT.Meta.get_broker_status(Broker) == :up && ConduitMQTT.Meta.get_broker_status(OtherBroker) == :up
     end)
 
     :ok
@@ -78,5 +78,19 @@ defmodule ConduitMQTTTest do
     assert_receive {:broker, _}
   end
 
-  # TODO test both brokers getting same message and message from one broker to the other
+  test "broker recovers from terminating all clients and recieves a message" do
+    clients = ConduitMQTT.Meta.get_clients(Broker)
+    Enum.each(clients, fn [client_id, _] -> Tortoise.Connection.disconnect(client_id) end)
+
+    ConduitMQTT.Util.wait_until(fn -> ConduitMQTT.Meta.get_broker_status(Broker) == :up end)
+
+    message =
+      %Conduit.Message{}
+      |> put_destination("foo/bar1")
+      |> put_body("test")
+
+    ConduitMQTT.publish(Broker, message, [], [])
+
+    assert_receive {:broker, _}
+  end
 end

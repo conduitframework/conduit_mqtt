@@ -1,19 +1,24 @@
-defmodule ConduitMQTT.Plug.ParseExtendedPayload do
+defmodule ConduitMQTT.Plug.Unwrap do
   use Conduit.Plug.Builder
 
   alias Conduit.ContentType
+  require Logger
 
   @doc """
   Puts headers and attributes into the body of an MQTT message
   """
-  @default_content_type "application/json"
+
   def call(message, next, opts) do
-    %{"attributes" => attributes, "headers" => headers, "body" => body} =
-      ContentType.parse(
-        message,
-        @default_content_type,
-        opts
-      ).body
+    unwrap_fn = Keyword.get(opts, :unwrap_fn, &default_unwrap/1)
+
+    message
+    |> unwrap_fn.()
+    |> next.()
+  end
+
+  defp default_unwrap(message) do
+    Logger.info("passed to default unwrap: #{inspect(message)}")
+    %{"attributes" => attributes, "headers" => headers, "body" => body} = message.body
 
     %{
       "content_encoding" => content_encoding,
@@ -37,6 +42,5 @@ defmodule ConduitMQTT.Plug.ParseExtendedPayload do
     |> put_created_by(created_by)
     |> put_message_id(message_id)
     |> put_user_id(user_id)
-    |> next.()
   end
 end

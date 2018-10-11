@@ -2,6 +2,8 @@ defmodule ConduitMQTTTest do
   @moduledoc false
   use ExUnit.Case, async: false
   import Conduit.Message
+  import Conduit.Plug.Format
+  import Conduit.Plug.Parse
   require Logger
 
   defmodule Broker do
@@ -94,7 +96,7 @@ defmodule ConduitMQTTTest do
     assert_receive {:broker, _}
   end
 
-  test "plug formats and decodes extended payload" do
+  test "plug wraps and unwraps with default functions" do
     message =
       %Conduit.Message{}
       |> put_body("test")
@@ -102,11 +104,13 @@ defmodule ConduitMQTTTest do
       |> put_header("header1", "header1 value")
       |> put_header("header2", true)
       |> put_header("header3", 3)
-      |> ConduitMQTT.Plug.FormatExtendedPayload.run()
+      |> ConduitMQTT.Plug.Wrap.run()
+      |> Conduit.Plug.Format.run(content_type: "application/json")
 
     decoded =
       message
-      |> ConduitMQTT.Plug.ParseExtendedPayload.run()
+      |> Conduit.Plug.Parse.run(content_type: "application/json")
+      |> ConduitMQTT.Plug.Unwrap.run()
 
     assert decoded.body == "test"
     assert decoded.created_by == "jeremy"
@@ -115,7 +119,22 @@ defmodule ConduitMQTTTest do
     assert get_header(decoded, "header3") == 3
   end
 
-  test "plug formats and decodes extended payload through broker" do
+  test "plug wraps and unwraps with provided functions" do
+    message =
+      %Conduit.Message{}
+      |> put_body("test")
+      |> ConduitMQTT.Plug.Wrap.run(wrap_fn: fn message -> %{message | body: "wrapped"} end)
+      |> Conduit.Plug.Format.run(content_type: "application/json")
+
+    decoded =
+      message
+      |> Conduit.Plug.Parse.run(content_type: "application/json")
+      |> ConduitMQTT.Plug.Unwrap.run(unwrap_fn: fn message -> %{message | body: "test"} end)
+
+    assert decoded.body == "test"
+  end
+
+  test "plug wraps and unwraps with default functions through broker" do
     message =
       %Conduit.Message{}
       |> put_body("test")
@@ -124,7 +143,8 @@ defmodule ConduitMQTTTest do
       |> put_header("header2", true)
       |> put_header("header3", 3)
       |> put_destination("foo/bar1")
-      |> ConduitMQTT.Plug.FormatExtendedPayload.run()
+      |> ConduitMQTT.Plug.Wrap.run()
+      |> Conduit.Plug.Format.run(content_type: "application/json")
 
     ConduitMQTT.publish(Broker, message, [], qos: 2, retain: false, timeout: 100)
 
@@ -132,9 +152,8 @@ defmodule ConduitMQTTTest do
 
     decoded =
       received_message
-      |> ConduitMQTT.Plug.ParseExtendedPayload.run()
-
-    Logger.info("decoded #{inspect(decoded)}")
+      |> Conduit.Plug.Parse.run(content_type: "application/json")
+      |> ConduitMQTT.Plug.Unwrap.run()
 
     assert decoded.body == "test"
     assert decoded.created_by == "jeremy"

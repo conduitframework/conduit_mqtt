@@ -87,18 +87,23 @@ defmodule ConduitMQTT do
   end
 
   defp error_if_needs_wrap(message) do
-    if true != Conduit.Message.get_private(message, :wrapped) && (has_attributes(message) || has_headers(message)) do
+    if !Conduit.Message.get_private(message, :wrapped) && (has_attributes(message) || has_headers(message)) do
       raise NeedsWrappingError,
             "Message headers and attributes are not supported in Conduit MQTT adapter without wrapping/unwrapping using ConduitMQTT.Plug.Wrap and ConduitMQTT.Plug.Unwrap"
     end
   end
 
+  @attributes ~w(content_encoding content_type correlation_id created_at created_by message_id user_id)a
   defp has_attributes(message) do
-    !(message.content_encoding == nil && message.content_type == nil && message.correlation_id == nil &&
-        message.created_at == nil && message.created_by == nil && message.message_id == nil && message.user_id == nil)
+    Enum.any?(
+      @attributes,
+      fn attribute ->
+        Map.get(message, attribute) != nil
+      end
+    )
   end
 
   defp has_headers(message) do
-    !(message.headers == %{})
+    message.headers != %{}
   end
 end

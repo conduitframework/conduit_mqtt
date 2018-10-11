@@ -1,8 +1,6 @@
 defmodule ConduitMQTT.Plug.Wrap do
   use Conduit.Plug.Builder
 
-  alias Conduit.ContentType
-
   @doc """
   Puts headers and attributes into the body of an MQTT message
   """
@@ -12,6 +10,7 @@ defmodule ConduitMQTT.Plug.Wrap do
 
     message
     |> wrap_fn.()
+    |> Conduit.Message.put_private(:wrapped, true)
     |> next.()
   end
 

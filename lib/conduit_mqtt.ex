@@ -14,6 +14,13 @@ defmodule ConduitMQTT do
 
   @pool_size 5
 
+  defmodule NeedsWrappingError do
+    @moduledoc """
+    Exception raised when a message is published with attributes or headers that need wrapping.
+    """
+    defexception [:message]
+  end
+
   def child_spec([broker, _, _, _] = args) do
     %{
       id: name(broker),
@@ -56,6 +63,8 @@ defmodule ConduitMQTT do
   def publish(broker, message, _config, opts) do
     # props = ConduitMQTT.Props.get(message) #TODO MQTT opts
 
+    error_if_needs_wrap(message)
+
     with_client_id(broker, fn client_id ->
       Tortoise.publish_sync(client_id, message.destination, message.body, opts)
     end)
@@ -75,5 +84,21 @@ defmodule ConduitMQTT do
     Util.retry([attempts: retries], fn ->
       :poolboy.transaction(pool, &ConduitMQTT.Conn.get_client_id(&1))
     end)
+  end
+
+  defp error_if_needs_wrap(message) do
+    if true != Conduit.Message.get_private(message, :wrapped) && (has_attributes(message) || has_headers(message)) do
+      raise NeedsWrappingError,
+            "Message headers and attributes are not supported in Conduit MQTT adapter without wrapping/unwrapping using ConduitMQTT.Plug.Wrap and ConduitMQTT.Plug.Unwrap"
+    end
+  end
+
+  defp has_attributes(message) do
+    !(message.content_encoding == nil && message.content_type == nil && message.correlation_id == nil &&
+        message.created_at == nil && message.created_by == nil && message.message_id == nil && message.user_id == nil)
+  end
+
+  defp has_headers(message) do
+    !(message.headers == %{})
   end
 end

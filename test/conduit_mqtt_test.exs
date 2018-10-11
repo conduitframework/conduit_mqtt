@@ -2,8 +2,6 @@ defmodule ConduitMQTTTest do
   @moduledoc false
   use ExUnit.Case, async: false
   import Conduit.Message
-  import Conduit.Plug.Format
-  import Conduit.Plug.Parse
   require Logger
 
   defmodule Broker do
@@ -164,5 +162,21 @@ defmodule ConduitMQTTTest do
     # topic pattern
     assert decoded.source == ["foo", "bar1"]
     assert get_header(decoded, "routing_key") == "foo/bar1"
+  end
+
+  test "publish with headers but no wrapper through broker raises error" do
+    message =
+      %Conduit.Message{}
+      |> put_body("test")
+      |> put_created_by("jeremy")
+      |> put_header("header1", "header1 value")
+      |> put_header("header2", true)
+      |> put_header("header3", 3)
+      |> put_destination("foo/bar1")
+      |> Conduit.Plug.Format.run(content_type: "application/json")
+
+    assert_raise ConduitMQTT.NeedsWrappingError, fn ->
+      ConduitMQTT.publish(Broker, message, [], qos: 2, retain: false, timeout: 100)
+    end
   end
 end

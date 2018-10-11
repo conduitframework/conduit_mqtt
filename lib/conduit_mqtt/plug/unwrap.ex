@@ -1,7 +1,6 @@
 defmodule ConduitMQTT.Plug.Unwrap do
   use Conduit.Plug.Builder
 
-  alias Conduit.ContentType
   require Logger
 
   @doc """
@@ -17,7 +16,6 @@ defmodule ConduitMQTT.Plug.Unwrap do
   end
 
   defp default_unwrap(message) do
-    Logger.info("passed to default unwrap: #{inspect(message)}")
     %{"attributes" => attributes, "headers" => headers, "body" => body} = message.body
 
     %{
@@ -26,7 +24,6 @@ defmodule ConduitMQTT.Plug.Unwrap do
       "correlation_id" => correlation_id,
       "created_at" => created_at,
       "created_by" => created_by,
-      "destination" => destination,
       "message_id" => message_id,
       "user_id" => user_id
     } = attributes

@@ -19,7 +19,11 @@ defmodule ConduitMQTT.SubPool do
   def init([broker, subscribers, adapter_opts]) do
     children =
       Enum.map(subscribers, fn {name, opts} ->
+        client_id = opts[:client_id] || ConduitMQTT.Conn.generate_client_id() #allow passing in for testing or single static subscriber
+
         adapter_opts = put_in(adapter_opts[:connection_opts][:subscriptions], [{opts[:from], opts[:qos]}])
+        adapter_opts = put_in(adapter_opts[:connection_opts][:client_id], client_id)
+        adapter_opts = put_in(adapter_opts[:connection_opts][:clean_session], false)
         {ConduitMQTT.Conn, [broker: broker, name: name, opts: opts ++ adapter_opts]}
       end)
 

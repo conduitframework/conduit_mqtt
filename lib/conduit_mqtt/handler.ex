@@ -8,13 +8,24 @@ defmodule ConduitMQTT.Handler do
     {:ok, args}
   end
 
-  def connection(status, [client_id: client_id, broker: broker, name: _name, opts: _opts] = state) do
+  def connection(status, [client_id: client_id, broker: broker, name: name, opts: _opts] = state) do
     # `status` will be either `:up` or `:down`; you can use this to
     # inform the rest of your system if the connection is currently
     # open or closed; tortoise should be busy reconnecting if you get
     # a `:down`
     Logger.debug("Connection #{client_id} on broker #{inspect(broker)} is #{status}")
     ConduitMQTT.Meta.put_client_id_status(broker, client_id, status)
+
+    if (name && status == :up && Tortoise.Connection.subscriptions(client_id) != nil) do
+      Logger.debug("Marking subscription #{name} up")
+      ConduitMQTT.Meta.put_subscription_status(broker, name, :up)
+    end
+
+    if (name && status != :up) do
+      Logger.debug("Marking subscription #{name} down")
+      ConduitMQTT.Meta.put_subscription_status(broker, name, :down)
+    end
+
     {:ok, state}
   end
 

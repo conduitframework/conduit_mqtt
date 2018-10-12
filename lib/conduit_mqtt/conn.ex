@@ -44,7 +44,7 @@ defmodule ConduitMQTT.Conn do
   end
 
   defp do_connect([broker: broker, name: name, opts: opts] = state) do
-    client_id = generate_client_id()
+    client_id = state[:opts][:connection_opts][:client_id] || generate_client_id()
 
     state = put_in(state[:opts][:connection_opts][:client_id], client_id)
 
@@ -77,7 +77,7 @@ defmodule ConduitMQTT.Conn do
     Keyword.get(state[:opts], :connection_opts)
   end
 
-  defp generate_client_id() do
+  def generate_client_id() do
     allowed_chars = Enum.concat([?0..?9, ?A..?Z, ?a..?z])
     random_char = fn -> Enum.random(allowed_chars) end
 

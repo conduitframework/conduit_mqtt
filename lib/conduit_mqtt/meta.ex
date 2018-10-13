@@ -5,8 +5,8 @@ defmodule ConduitMQTT.Meta do
   @type broker :: atom
   @type status :: :up | :down
   @type client_id :: String.t()
-  @type pool_size :: Integer.t()
-  @type sub_count :: Integer.t()
+  @type pool_size :: integer()
+  @type sub_count :: integer()
   @type subscription :: String.t()
 
   @spec create(broker, pool_size, sub_count) :: atom

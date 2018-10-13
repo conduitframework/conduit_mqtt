@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: ~/app
     docker:
-      - image: circleci/elixir:1.6.2
+      - image: circleci/elixir:1.7.3
       - image: erlio/docker-vernemq:1.5.0
         environment:
           DOCKER_VERNEMQ_ALLOW_ANONYMOUS: "on"

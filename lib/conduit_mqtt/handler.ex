@@ -1,4 +1,8 @@
 defmodule ConduitMQTT.Handler do
+  @moduledoc """
+  Tortoise.Handler implementation
+  """
+
   use Tortoise.Handler
   alias Conduit.Message
   import Conduit.Message
@@ -13,28 +17,28 @@ defmodule ConduitMQTT.Handler do
     # inform the rest of your system if the connection is currently
     # open or closed; tortoise should be busy reconnecting if you get
     # a `:down`
-    Logger.debug("Connection #{client_id} on broker #{inspect(broker)} is #{status}")
+    Logger.debug(fn -> "Connection #{client_id} on broker #{inspect(broker)} is #{status}" end)
     ConduitMQTT.Meta.put_client_id_status(broker, client_id, status)
     {:ok, state}
   end
 
   def handle_message(topic, payload, [client_id: client_id, broker: broker, name: name, opts: opts] = state) do
-    Logger.debug(
+    Logger.debug(fn ->
       "Subscriber #{name} on broker #{inspect(broker)} client_id #{client_id} got message: #{inspect(payload)} on topic: #{
         inspect(topic)
       }"
-    )
+    end)
 
     :ok = reply(broker, name, topic, payload, opts)
     {:ok, state}
   end
 
   def subscription(status, topic_filter, [client_id: client_id, broker: broker, name: name, opts: _opts] = state) do
-    Logger.debug(
+    Logger.debug(fn ->
       "Subscription #{name} on broker #{inspect(broker)} client_id #{client_id} topic filter #{topic_filter} is #{
         status
       }"
-    )
+    end)
 
     ConduitMQTT.Meta.put_subscription_status(broker, name, status)
     {:ok, state}

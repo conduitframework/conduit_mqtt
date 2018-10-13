@@ -81,7 +81,8 @@ defmodule ConduitMQTT.Conn do
     allowed_chars = Enum.concat([?0..?9, ?A..?Z, ?a..?z])
     random_char = fn -> Enum.random(allowed_chars) end
 
-    Stream.repeatedly(random_char)
+    random_char
+    |> Stream.repeatedly()
     |> Enum.take(22)
     |> List.to_string()
   end

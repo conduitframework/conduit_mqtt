@@ -1,4 +1,7 @@
 defmodule ConduitMQTT.Plug.Unwrap do
+  @moduledoc """
+  Plug to help unwrap headers and attributes from the MQTT body payload
+  """
   use Conduit.Plug.Builder
 
   require Logger

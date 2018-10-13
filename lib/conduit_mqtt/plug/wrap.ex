@@ -1,4 +1,7 @@
 defmodule ConduitMQTT.Plug.Wrap do
+  @moduledoc """
+  Plug to help wrap headers and attributes into the MQTT body payload
+  """
   use Conduit.Plug.Builder
 
   @doc """

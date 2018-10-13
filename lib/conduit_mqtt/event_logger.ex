@@ -1,6 +1,6 @@
 defmodule ConduitMQTT.EventLogger do
   @moduledoc """
-  Manages an Tortoise connection
+  Can be used to log Tortoise Events (NOT USED RIGHT NOW)
   """
   use GenServer
   require Logger

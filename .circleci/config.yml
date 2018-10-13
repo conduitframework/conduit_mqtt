@@ -43,7 +43,7 @@ jobs:
       - run: mix compile
       - run: MIX_ENV=test mix compile
       - run: MIX_ENV=prod mix compile
-      #- run: mix dialyzer --plt --no-compile
+      - run: mix dialyzer --plt --no-compile
       - save_cache:
           key: v6-build-{{checksum "mix.lock.frozen"}}
           paths:

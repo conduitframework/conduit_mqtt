@@ -93,7 +93,8 @@ similar function).
 
 Example pipelines might look as follows:
 
-```pipeline :serialize do
+```elixir
+   pipeline :serialize do
      plug Conduit.Plug.Format, content_type: "application/json"
      plug Conduit.Plug.Encode, encoding: "aes256gcm"
      plug ConduitMQTT.Plug.Wrap 
@@ -105,9 +106,10 @@ formats that into json for transport. Your pipeline could be simpler.
 
 And the reverse of the above pipeline: 
 
-```pipeline :deserialize do
+```elixir
+   pipeline :deserialize do
      plug Conduit.Plug.Parse, content_type: "application/json"
-     plug ConduitMQTT.Plug.Unrap
+     plug ConduitMQTT.Plug.Unwrap
      plug Conduit.Plug.Decode, encoding: "aes256gcm" 
      plug Conduit.Plug.Parse, content_type: "application/json"
    end

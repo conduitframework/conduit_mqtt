@@ -28,14 +28,8 @@ This package can be installed as:
 # config/config.exs
 
 config :my_app, MyApp.Broker,
-  adapter: ConduitMQTT, connection_opts: [server: {Tortoise.Transport.Tcp, host: 'localhost', port: 1883}]  #TODO IS THIS CORRECT WAY TO GET INTO ADAPTER OPTS?
+  adapter: ConduitMQTT, connection_opts: [server: {Tortoise.Transport.Tcp, host: 'localhost', port: 1883}]  #TODO TEST THIS GETS INTO ADAPTER OPTS?
 
-# Stop lager redirecting :error_logger messages
-config :lager, :error_logger_redirect, false
-
-# Stop lager removing Logger's :error_logger handler
-config :lager, :error_logger_whitelist, [Logger.ErrorHandler]
-```
 
 For the full set of connection_opts, see the docs for underlying library [Tortiose](https://hexdocs.pm/tortoise/connecting_to_a_mqtt_broker.html#connection-handler).
 
@@ -86,6 +80,38 @@ end
 * `:to` - The topic for the message. If the message already has it's destination set, this option will be ignored.
 * `:qos` - The quality of service for the publish defaults to 0.
 
+
+## Supporting Message Attributes and Headers
+
+MQTT 3.1.1 and below do not support a mechanism for message headers.  In order to support conduits headers and attributes 
+if you need to use these, you need to wrap them into your payload.  Two plugs are provided to help with this
+
+ConduitMQTT.Plug.Wrap and ConduitMQTT.Plug.Unwrap each provide a default method for wrapping and unwrapping headers and
+attributes into the payload along with the message body.  You can also pass a wrap_fn and unwrap_fn to them in the opts
+for the plug if you would like to override the default functions (you can also write your own plugs that perform a 
+similar function).
+
+Example pipelines might look as follows:
+
+```pipeline :serialize do
+     plug Conduit.Plug.Format, content_type: "application/json"
+     plug Conduit.Plug.Encode, encoding: "aes256gcm"
+     plug ConduitMQTT.Plug.Wrap 
+     plug Conduit.Plug.Format, content_type: "application/json"
+   end
+```
+The above formats the message body into json, encrypts it, wraps the headers, attributes, and body into map and then 
+formats that into json for transport. Your pipeline could be simpler.
+
+And the reverse of the above pipeline: 
+
+```pipeline :deserialize do
+     plug Conduit.Plug.Parse, content_type: "application/json"
+     plug ConduitMQTT.Plug.Unrap
+     plug Conduit.Plug.Decode, encoding: "aes256gcm" 
+     plug Conduit.Plug.Parse, content_type: "application/json"
+   end
+```
 
 ## Local Testing with Docker
 

@@ -8,19 +8,19 @@ This package can be installed as:
 
   1. Add `conduit_mqtt` to your list of dependencies in `mix.exs`:
 
-    ```elixir
+```elixir
     def deps do
       [{:conduit_mqtt, "~> 0.1.0"}]
     end
-    ```
+```
 
   2. Ensure `conduit_mqtt` is started before your application:
 
-    ```elixir
+```elixir
     def application do
       [applications: [:conduit_mqtt]]
     end
-    ```
+```
 
 ## Configuring the Adapter
 
@@ -29,7 +29,7 @@ This package can be installed as:
 
 config :my_app, MyApp.Broker,
   adapter: ConduitMQTT, connection_opts: [server: {Tortoise.Transport.Tcp, host: 'localhost', port: 1883}]  #TODO TEST THIS GETS INTO ADAPTER OPTS?
-
+```
 
 For the full set of connection_opts, see the docs for underlying library [Tortiose](https://hexdocs.pm/tortoise/connecting_to_a_mqtt_broker.html#connection-handler).
 

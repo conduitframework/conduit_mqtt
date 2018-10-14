@@ -1,10 +1,13 @@
 defmodule ConduitMQTT.Plug.Unwrap do
+  @moduledoc """
+  Plug to help unwrap headers and attributes from the MQTT body payload
+  """
   use Conduit.Plug.Builder
 
   require Logger
 
   @doc """
-  Puts headers and attributes into the body of an MQTT message
+  Gets headers and attributes from the wrapped body of an MQTT message
   """
 
   def call(message, next, opts) do

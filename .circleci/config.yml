@@ -3,10 +3,12 @@ jobs:
   build:
     working_directory: ~/app
     docker:
-      - image: circleci/elixir:1.6.2
+      - image: circleci/elixir:1.7.3
+      - image: erlio/docker-vernemq:1.5.0
         environment:
-          - QUEUE_URL=amqp://localhost:5672
-      - image: rabbitmq:3.7.3-management
+          DOCKER_VERNEMQ_ALLOW_ANONYMOUS: "on"
+          DOCKER_VERNEMQ_log.console.level: "debug"
+          DOCKER_VERNEMQ_LISTENER__TCP__LOCAL: "127.0.0.1:1883"
     steps:
       - checkout
 

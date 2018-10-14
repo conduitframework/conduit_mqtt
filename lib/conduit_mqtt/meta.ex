@@ -5,8 +5,8 @@ defmodule ConduitMQTT.Meta do
   @type broker :: atom
   @type status :: :up | :down
   @type client_id :: String.t()
-  @type pool_size :: Integer.t()
-  @type sub_count :: Integer.t()
+  @type pool_size :: integer()
+  @type sub_count :: integer()
   @type subscription :: String.t()
 
   @spec create(broker, pool_size, sub_count) :: atom
@@ -146,14 +146,14 @@ defmodule ConduitMQTT.Meta do
     count_of_clients_up = :ets.select_count(table, [{{{:client, :"$1"}, :up}, [], [true]}])
     count_of_subscribers_up = :ets.select_count(table, [{{{:subscription, :"$1"}, :up}, [], [true]}])
 
-    Logger.debug(
+    Logger.debug(fn ->
       "Broker #{broker} has #{count_of_clients_up} of #{client_count} clients and #{count_of_subscribers_up} of #{
         subscriber_count
       } subscriptions up"
-    )
+    end)
 
     status = if count_of_clients_up + count_of_subscribers_up == client_count + subscriber_count, do: :up, else: :down
-    Logger.debug("Broker #{broker} is #{status}")
+    Logger.debug(fn -> "Broker #{broker} is #{status}" end)
     status
   end
 

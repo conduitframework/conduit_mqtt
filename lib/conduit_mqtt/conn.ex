@@ -5,8 +5,14 @@ defmodule ConduitMQTT.Conn do
   use GenServer
   require Logger
 
+  @type broker :: atom
+  @type name :: String.t()
+  @type conn_type :: :pub | :sub
+  @type opts :: []
+
   ## Client API
-  def child_spec([broker: broker, name: name, opts: _] = args) do
+  @spec child_spec(broker: broker, name: name, conn_type: conn_type, opts: opts) :: %{}
+  def child_spec([broker: broker, name: name, conn_type: _conn_type, opts: _] = args) do
     %{
       id: name(broker, name),
       start: {__MODULE__, :start_link, [args]},
@@ -29,7 +35,6 @@ defmodule ConduitMQTT.Conn do
   ## Server Callbacks
   def init(opts) do
     send(self(), :make_connection)
-    # {:ok, state} = do_connect(%{opts: opts}) #syncrnous but doesn't help, connection still not ready on return
     {:ok, opts}
   end
 
@@ -43,7 +48,7 @@ defmodule ConduitMQTT.Conn do
     {:reply, {:ok, client_id}, state}
   end
 
-  defp do_connect([broker: broker, name: name, opts: opts] = state) do
+  defp do_connect([broker: broker, name: name, conn_type: conn_type, opts: opts] = state) do
     client_id = generate_client_id()
 
     state = put_in(state[:opts][:connection_opts][:client_id], client_id)
@@ -51,7 +56,7 @@ defmodule ConduitMQTT.Conn do
     state =
       put_in(
         state[:opts][:connection_opts][:handler],
-        {ConduitMQTT.Handler, [client_id: client_id, broker: broker, name: name, opts: opts]}
+        {ConduitMQTT.Handler, [client_id: client_id, broker: broker, name: name, conn_type: conn_type, opts: opts]}
       )
 
     connection_opts = get_connection_opts_from_state(state)

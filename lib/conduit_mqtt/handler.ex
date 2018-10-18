@@ -8,21 +8,31 @@ defmodule ConduitMQTT.Handler do
   import Conduit.Message
   require Logger
 
-  def init([client_id: _client_id, broker: _broker, name: _name, opts: _opts] = args) do
+  def init([client_id: _client_id, broker: _broker, name: _name, conn_type: _conn_type, opts: _opts] = args) do
     {:ok, args}
   end
 
-  def connection(status, [client_id: client_id, broker: broker, name: _name, opts: _opts] = state) do
+  def connection(status, [client_id: client_id, broker: broker, name: name, conn_type: conn_type, opts: _opts] = state) do
     # `status` will be either `:up` or `:down`; you can use this to
     # inform the rest of your system if the connection is currently
     # open or closed; tortoise should be busy reconnecting if you get
     # a `:down`
     Logger.debug(fn -> "Connection #{client_id} on broker #{inspect(broker)} is #{status}" end)
     ConduitMQTT.Meta.put_client_id_status(broker, client_id, status)
+
+    if conn_type == :sub && status != :up do
+      Logger.debug("Marking subscription #{name} down")
+      ConduitMQTT.Meta.put_subscription_status(broker, name, :down)
+    end
+
     {:ok, state}
   end
 
-  def handle_message(topic, payload, [client_id: client_id, broker: broker, name: name, opts: opts] = state) do
+  def handle_message(
+        topic,
+        payload,
+        [client_id: client_id, broker: broker, name: name, conn_type: _conn_type, opts: opts] = state
+      ) do
     Logger.debug(fn ->
       "Subscriber #{name} on broker #{inspect(broker)} client_id #{client_id} got message: #{inspect(payload)} on topic: #{
         inspect(topic)
@@ -33,7 +43,11 @@ defmodule ConduitMQTT.Handler do
     {:ok, state}
   end
 
-  def subscription(status, topic_filter, [client_id: client_id, broker: broker, name: name, opts: _opts] = state) do
+  def subscription(
+        status,
+        topic_filter,
+        [client_id: client_id, broker: broker, name: name, conn_type: _conn_type, opts: _opts] = state
+      ) do
     Logger.debug(fn ->
       "Subscription #{name} on broker #{inspect(broker)} client_id #{client_id} topic filter #{topic_filter} is #{
         status
@@ -44,7 +58,10 @@ defmodule ConduitMQTT.Handler do
     {:ok, state}
   end
 
-  def terminate(_reason, [client_id: client_id, broker: broker, name: name, opts: _opts] = _state) do
+  def terminate(
+        _reason,
+        [client_id: client_id, broker: broker, name: name, conn_type: _conn_type, opts: _opts] = _state
+      ) do
     # tortoise doesn't care about what you return from terminate/2,
     # that is in alignment with other behaviours that implement a
     # terminate-callback

@@ -8,11 +8,18 @@ defmodule ConduitMQTT.Handler do
   import Conduit.Message
   require Logger
 
-  def init([client_id: _client_id, broker: _broker, name: _name, conn_type: _conn_type, opts: _opts] = args) do
-    {:ok, args}
+  defmodule State do
+    @moduledoc """
+    State struct for handler
+    """
+    defstruct [:client_id, :broker, :name, :conn_type, :opts]
   end
 
-  def connection(status, [client_id: client_id, broker: broker, name: name, conn_type: conn_type, opts: _opts] = state) do
+  def init(args) do
+    {:ok, struct!(State, args)}
+  end
+
+  def connection(status, %State{client_id: client_id, broker: broker, name: name, conn_type: conn_type} = state) do
     # `status` will be either `:up` or `:down`; you can use this to
     # inform the rest of your system if the connection is currently
     # open or closed; tortoise should be busy reconnecting if you get
@@ -31,7 +38,7 @@ defmodule ConduitMQTT.Handler do
   def handle_message(
         topic,
         payload,
-        [client_id: client_id, broker: broker, name: name, conn_type: _conn_type, opts: opts] = state
+        %State{client_id: client_id, broker: broker, name: name, opts: opts} = state
       ) do
     Logger.debug(fn ->
       "Subscriber #{name} on broker #{inspect(broker)} client_id #{client_id} got message: #{inspect(payload)} on topic: #{
@@ -46,7 +53,7 @@ defmodule ConduitMQTT.Handler do
   def subscription(
         status,
         topic_filter,
-        [client_id: client_id, broker: broker, name: name, conn_type: _conn_type, opts: _opts] = state
+        %State{client_id: client_id, broker: broker, name: name} = state
       ) do
     Logger.debug(fn ->
       "Subscription #{name} on broker #{inspect(broker)} client_id #{client_id} topic filter #{topic_filter} is #{
@@ -60,7 +67,7 @@ defmodule ConduitMQTT.Handler do
 
   def terminate(
         _reason,
-        [client_id: client_id, broker: broker, name: name, conn_type: _conn_type, opts: _opts] = _state
+        %State{client_id: client_id, broker: broker, name: name} = _state
       ) do
     # tortoise doesn't care about what you return from terminate/2,
     # that is in alignment with other behaviours that implement a

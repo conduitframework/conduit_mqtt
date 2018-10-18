@@ -21,7 +21,7 @@ defmodule ConduitMQTT.Handler do
     ConduitMQTT.Meta.put_client_id_status(broker, client_id, status)
 
     if conn_type == :sub && status != :up do
-      Logger.debug("Marking subscription #{name} down")
+      Logger.debug(fn -> "Marking subscription #{name} down" end)
       ConduitMQTT.Meta.put_subscription_status(broker, name, :down)
     end
 

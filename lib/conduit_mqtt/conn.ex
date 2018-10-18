@@ -11,7 +11,6 @@ defmodule ConduitMQTT.Conn do
   @type opts :: []
 
   ## Client API
-  @spec child_spec(broker: broker, name: name, conn_type: conn_type, opts: opts) :: %{}
   def child_spec([broker: broker, name: name, conn_type: _conn_type, opts: _] = args) do
     %{
       id: name(broker, name),

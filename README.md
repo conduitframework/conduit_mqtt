@@ -28,11 +28,13 @@ This package can be installed as:
 # config/config.exs
 
 config :my_app, MyApp.Broker,
-  adapter: ConduitMQTT, connection_opts: [server: {Tortoise.Transport.Tcp, host: 'localhost', port: 1883}]  #TODO TEST THIS GETS INTO ADAPTER OPTS?
+  adapter: ConduitMQTT, connection_opts: [server: {Tortoise.Transport.Tcp, host: 'localhost', port: 1883}]
 ```
 
 For the full set of connection_opts, see the docs for underlying library [Tortiose](https://hexdocs.pm/tortoise/connecting_to_a_mqtt_broker.html#connection-handler).
 
+NOTE: will and retain have not been tested. They may work by passing through on the opts. Let us know your use cases
+or submit a PR
 
 ## Configuring a Subscriber
 

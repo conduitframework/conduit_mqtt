@@ -53,30 +53,38 @@ defmodule ConduitMQTT.Meta do
 
   @spec get_client_id_status(broker, client_id) :: status
   def get_client_id_status(broker, client_id) do
-    lookup_client_id_status(broker, client_id)
+    lookup_status(broker, {:client_id, client_id})
   end
 
   @spec get_subscription_status(broker, subscription) :: status
   def get_subscription_status(broker, subscription) do
-    lookup_subscription_status(broker, subscription)
+    lookup_status(broker, {:subscription, subscription})
   end
 
   @spec put_client_id_status(broker, client_id, status) :: boolean
   def put_client_id_status(broker, client_id, status) do
-    insert_client_id_status(broker, client_id, status)
+    broker
+    |> meta_name()
+    |> :ets.insert({{:client, client_id}, status})
   end
 
   @spec put_subscription_status(broker, subscription, status) :: boolean
   def put_subscription_status(broker, subscription, status) do
-    insert_subscription_status(broker, subscription, status)
+    broker
+    |> meta_name()
+    |> :ets.insert({{:subscription, subscription}, status})
   end
 
   def get_clients(broker) do
-    lookup_clients(broker)
+    broker
+    |> meta_name()
+    |> :ets.match({{:client, :"$1"}, :"$2"})
   end
 
   def get_subscriptions(broker) do
-    lookup_subscriptions(broker)
+    broker
+    |> meta_name()
+    |> :ets.match({{:subscription, :"$1"}, :"$2"})
   end
 
   def get_all(broker) do
@@ -88,22 +96,10 @@ defmodule ConduitMQTT.Meta do
     Module.concat([broker, Meta])
   end
 
-  defp insert_client_id_status(broker, client_id, status) do
+  defp lookup_status(broker, key, fallback \\ fn -> nil end) do
     broker
     |> meta_name()
-    |> :ets.insert({{:client, client_id}, status})
-  end
-
-  defp insert_subscription_status(broker, subscription, status) do
-    broker
-    |> meta_name()
-    |> :ets.insert({{:subscription, subscription}, status})
-  end
-
-  defp lookup_client_id_status(broker, client_id, fallback \\ fn -> nil end) do
-    broker
-    |> meta_name()
-    |> :ets.lookup({:client, client_id})
+    |> :ets.lookup(key)
     |> case do
       [] ->
         fallback.()
@@ -111,31 +107,6 @@ defmodule ConduitMQTT.Meta do
       [{_, status} | _] ->
         status
     end
-  end
-
-  defp lookup_subscription_status(broker, subscription, fallback \\ fn -> nil end) do
-    broker
-    |> meta_name()
-    |> :ets.lookup({:subscription, subscription})
-    |> case do
-      [] ->
-        fallback.()
-
-      [{_, status} | _] ->
-        status
-    end
-  end
-
-  defp lookup_clients(broker) do
-    broker
-    |> meta_name()
-    |> :ets.match({{:client, :"$1"}, :"$2"})
-  end
-
-  defp lookup_subscriptions(broker) do
-    broker
-    |> meta_name()
-    |> :ets.match({{:subscription, :"$1"}, :"$2"})
   end
 
   defp calculate_broker_status(broker) do
@@ -155,16 +126,5 @@ defmodule ConduitMQTT.Meta do
     status = if count_of_clients_up + count_of_subscribers_up == client_count + subscriber_count, do: :up, else: :down
     Logger.debug(fn -> "Broker #{broker} is #{status}" end)
     status
-  end
-
-  def key_stream(table_name) do
-    Stream.resource(
-      fn -> :ets.first(table_name) end,
-      fn
-        :"$end_of_table" -> {:halt, nil}
-        previous_key -> {[previous_key], :ets.next(table_name, previous_key)}
-      end,
-      fn _ -> :ok end
-    )
   end
 end

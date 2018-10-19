@@ -60,10 +60,10 @@ defmodule ConduitMQTT do
     {:ok, message}
   end
 
-  def publish(broker, message, _config, opts) do
-    # props = ConduitMQTT.Props.get(message) #TODO MQTT opts
-
-    error_if_needs_wrap(message)
+  def publish(broker, message, config, opts) do
+    if !Keyword.get(config, :ignore_needs_wrapping, false) do
+      error_if_needs_wrap(message)
+    end
 
     with_client_id(broker, fn client_id ->
       Tortoise.publish_sync(client_id, message.destination, message.body, opts)
@@ -94,6 +94,9 @@ defmodule ConduitMQTT do
 
         https://hexdocs.pm/conduit_mqtt/ConduitMQTT.Plug.Wrap.html
         https://hexdocs.pm/conduit_mqtt/ConduitMQTT.Plug.Unwrap.html
+
+      If you don't mind losing the headers and attributes in transit you can enable
+      'ignore_needs_wrapping: true' on the adapter opts in your config.
 
       You can also stop using the message headers and attributes to stop receiving this error.
       """

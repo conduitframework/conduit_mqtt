@@ -179,4 +179,18 @@ defmodule ConduitMQTTTest do
       ConduitMQTT.publish(Broker, message, [], qos: 2, retain: false, timeout: 100)
     end
   end
+
+  test "publish with headers but no wrapper through broker ignores error with flag set" do
+    message =
+      %Conduit.Message{}
+      |> put_body("test")
+      |> put_created_by("jeremy")
+      |> put_header("header1", "header1 value")
+      |> put_header("header2", true)
+      |> put_header("header3", 3)
+      |> put_destination("foo/bar1")
+      |> Conduit.Plug.Format.run(content_type: "application/json")
+
+    :ok = ConduitMQTT.publish(Broker, message, [ignore_needs_wrapping: true], qos: 2, retain: false, timeout: 100)
+  end
 end

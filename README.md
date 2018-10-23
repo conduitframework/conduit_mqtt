@@ -1,5 +1,11 @@
 # ConduitMQTT
 
+[![CircleCI](https://img.shields.io/circleci/project/github/conduitframework/conduit_mqtt.svg?style=flat-square)](https://circleci.com/gh/conduitframework/conduit_mqtt)
+[![Coveralls](https://img.shields.io/coveralls/conduitframework/conduit_mqtt.svg?style=flat-square)](https://coveralls.io/github/conduitframework/conduit_mqtt)
+[![Hex.pm](https://img.shields.io/hexpm/v/conduit_mqtt.svg?style=flat-square)](https://hex.pm/packages/conduit_mqtt)
+[![Hex.pm](https://img.shields.io/hexpm/l/conduit_mqtt.svg?style=flat-square)](https://github.com/conduitframework/conduit_mqtt/blob/master/LICENSE.md)
+[![Hex.pm](https://img.shields.io/hexpm/dt/conduit_mqtt.svg?style=flat-square)](https://hex.pm/packages/conduit_mqtt)
+
 An MQTT adapter for [Conduit](https://github.com/conduitframework/conduit).
 
 ## Installation
@@ -35,6 +41,10 @@ For the full set of connection_opts, see the docs for underlying library [Tortio
 
 NOTE: will and retain have not been tested. They may work by passing through on the opts. Let us know your use cases
 or submit a PR
+
+## Configuring Queues
+
+MQTT defines queues on use. Configuring subscribers and publishers is all that's needed.
 
 ## Configuring a Subscriber
 
@@ -85,12 +95,12 @@ end
 
 ## Supporting Message Attributes and Headers
 
-MQTT 3.1.1 and below do not support a mechanism for message headers.  In order to support conduits headers and attributes 
+MQTT 3.1.1 and below do not support a mechanism for message headers.  In order to support conduits headers and attributes
 if you need to use these, you need to wrap them into your payload.  Two plugs are provided to help with this
 
 ConduitMQTT.Plug.Wrap and ConduitMQTT.Plug.Unwrap each provide a default method for wrapping and unwrapping headers and
 attributes into the payload along with the message body.  You can also pass a wrap_fn and unwrap_fn to them in the opts
-for the plug if you would like to override the default functions (you can also write your own plugs that perform a 
+for the plug if you would like to override the default functions (you can also write your own plugs that perform a
 similar function).
 
 Example pipelines might look as follows:
@@ -99,20 +109,20 @@ Example pipelines might look as follows:
    pipeline :serialize do
      plug Conduit.Plug.Format, content_type: "application/json"
      plug Conduit.Plug.Encode, encoding: "aes256gcm"
-     plug ConduitMQTT.Plug.Wrap 
+     plug ConduitMQTT.Plug.Wrap
      plug Conduit.Plug.Format, content_type: "application/json"
    end
 ```
-The above formats the message body into json, encrypts it, wraps the headers, attributes, and body into map and then 
+The above formats the message body into json, encrypts it, wraps the headers, attributes, and body into map and then
 formats that into json for transport. Your pipeline could be simpler.
 
-And the reverse of the above pipeline: 
+And the reverse of the above pipeline:
 
 ```elixir
    pipeline :deserialize do
      plug Conduit.Plug.Parse, content_type: "application/json"
      plug ConduitMQTT.Plug.Unwrap
-     plug Conduit.Plug.Decode, encoding: "aes256gcm" 
+     plug Conduit.Plug.Decode, encoding: "aes256gcm"
      plug Conduit.Plug.Parse, content_type: "application/json"
    end
 ```
@@ -127,4 +137,3 @@ docker run -p 1883:1883 -e "DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on" -e "DOCKER_VERNEM
 - Trim down some of the logging
 - Lots of TODOs
 - Keyword lists in the GenServer's should probably be maps or normal lists
-- add the badges to the readme

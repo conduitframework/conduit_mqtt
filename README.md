@@ -93,15 +93,11 @@ end
 * `:qos` - The quality of service for the publish defaults to 0.
 
 
-## Supporting Message Attributes and Headers
+## Supporting Message Fields and Headers
 
-MQTT 3.1.1 and below do not support a mechanism for message headers.  In order to support conduits headers and attributes
-if you need to use these, you need to wrap them into your payload.  Two plugs are provided to help with this
-
-ConduitMQTT.Plug.Wrap and ConduitMQTT.Plug.Unwrap each provide a default method for wrapping and unwrapping headers and
-attributes into the payload along with the message body.  You can also pass a wrap_fn and unwrap_fn to them in the opts
-for the plug if you would like to override the default functions (you can also write your own plugs that perform a
-similar function).
+MQTT 3.1.1 and below do not support a mechanism for message headers.  In order to support Conduit's message headers and
+fields, you need to wrap them into your message body.  You can use
+[Conduit.Plug.Wrap](https://hexdocs.pm/conduit/Conduit.Plug.Wrap.html) and [Conduit.Plug.Unwrap](https://hexdocs.pm/conduit/Conduit.Plug.Unwrap.html) to help with that.
 
 Example pipelines might look as follows:
 
@@ -109,11 +105,12 @@ Example pipelines might look as follows:
    pipeline :serialize do
      plug Conduit.Plug.Format, content_type: "application/json"
      plug Conduit.Plug.Encode, encoding: "aes256gcm"
-     plug ConduitMQTT.Plug.Wrap
+     plug Conduit.Plug.Wrap
      plug Conduit.Plug.Format, content_type: "application/json"
    end
 ```
-The above formats the message body into json, encrypts it, wraps the headers, attributes, and body into map and then
+
+The above formats the message body into json, encrypts it, wraps the headers, fields, and body into a map and then
 formats that into json for transport. Your pipeline could be simpler.
 
 And the reverse of the above pipeline:
@@ -121,7 +118,7 @@ And the reverse of the above pipeline:
 ```elixir
    pipeline :deserialize do
      plug Conduit.Plug.Parse, content_type: "application/json"
-     plug ConduitMQTT.Plug.Unwrap
+     plug Conduit.Plug.Unwrap
      plug Conduit.Plug.Decode, encoding: "aes256gcm"
      plug Conduit.Plug.Parse, content_type: "application/json"
    end
@@ -130,10 +127,13 @@ And the reverse of the above pipeline:
 ## Local Testing with Docker
 
 verneMQ  docker command for development testing:
-```
+
+``` bash
 docker run -p 1883:1883 -e "DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on" -e "DOCKER_VERNEMQ_log.console.level=debug" -it erlio/docker-vernemq:1.5.0
 ```
+
 ## TODO:
-- Trim down some of the logging
-- Lots of TODOs
-- Keyword lists in the GenServer's should probably be maps or normal lists
+
+* Trim down some of the logging
+* Lots of TODOs
+* Keyword lists in the GenServer's should probably be maps or normal lists

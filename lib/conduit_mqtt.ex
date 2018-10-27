@@ -89,14 +89,14 @@ defmodule ConduitMQTT do
   defp error_if_needs_wrap(message) do
     if !Conduit.Message.get_private(message, :wrapped) && (has_attributes(message) || has_headers(message)) do
       raise NeedsWrappingError, """
-      Message headers and attributes are not supported natively in MQTT. ConduitMQTT provides two plugs
+      Message headers and attributes are not supported natively in MQTT. Conduit provides two plugs
       for wrapping/unwrapping. See docs for more info:
 
-        https://hexdocs.pm/conduit_mqtt/ConduitMQTT.Plug.Wrap.html
-        https://hexdocs.pm/conduit_mqtt/ConduitMQTT.Plug.Unwrap.html
+        https://hexdocs.pm/conduit/Conduit.Plug.Wrap.html
+        https://hexdocs.pm/conduit/Conduit.Plug.Unwrap.html
 
       If you don't mind losing the headers and attributes in transit you can enable
-      'ignore_needs_wrapping: true' on the adapter opts in your config.
+      `ignore_needs_wrapping: true` on the adapter opts in your config.
 
       You can also stop using the message headers and attributes to stop receiving this error.
       """

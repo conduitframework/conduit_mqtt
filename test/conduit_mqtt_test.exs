@@ -102,13 +102,13 @@ defmodule ConduitMQTTTest do
       |> put_header("header1", "header1 value")
       |> put_header("header2", true)
       |> put_header("header3", 3)
-      |> ConduitMQTT.Plug.Wrap.run()
+      |> Conduit.Plug.Wrap.run()
       |> Conduit.Plug.Format.run(content_type: "application/json")
 
     decoded =
       message
       |> Conduit.Plug.Parse.run(content_type: "application/json")
-      |> ConduitMQTT.Plug.Unwrap.run()
+      |> Conduit.Plug.Unwrap.run()
 
     assert decoded.body == "test"
     assert decoded.created_by == "jeremy"
@@ -121,13 +121,13 @@ defmodule ConduitMQTTTest do
     message =
       %Conduit.Message{}
       |> put_body("test")
-      |> ConduitMQTT.Plug.Wrap.run(wrap_fn: fn message -> %{message | body: "wrapped"} end)
+      |> Conduit.Plug.Wrap.run(wrap_fn: fn message -> %{message | body: "wrapped"} end)
       |> Conduit.Plug.Format.run(content_type: "application/json")
 
     decoded =
       message
       |> Conduit.Plug.Parse.run(content_type: "application/json")
-      |> ConduitMQTT.Plug.Unwrap.run(unwrap_fn: fn message -> %{message | body: "test"} end)
+      |> Conduit.Plug.Unwrap.run(unwrap_fn: fn message -> %{message | body: "test"} end)
 
     assert decoded.body == "test"
   end
@@ -141,7 +141,7 @@ defmodule ConduitMQTTTest do
       |> put_header("header2", true)
       |> put_header("header3", 3)
       |> put_destination("foo/bar1")
-      |> ConduitMQTT.Plug.Wrap.run()
+      |> Conduit.Plug.Wrap.run()
       |> Conduit.Plug.Format.run(content_type: "application/json")
 
     ConduitMQTT.publish(Broker, message, [], qos: 2, retain: false, timeout: 100)
@@ -151,7 +151,7 @@ defmodule ConduitMQTTTest do
     decoded =
       received_message
       |> Conduit.Plug.Parse.run(content_type: "application/json")
-      |> ConduitMQTT.Plug.Unwrap.run()
+      |> Conduit.Plug.Unwrap.run()
 
     assert decoded.body == "test"
     assert decoded.created_by == "jeremy"

@@ -49,7 +49,7 @@ defmodule ConduitMQTT.Mixfile do
       {:tortoise, "~> 0.9.1"},
       {:connection, "~> 1.0"},
       {:poolboy, "~> 1.5"},
-      {:conduit, "~> 0.11"},
+      {:conduit, "~> 0.12.8"},
       {:ex_doc, "~> 0.18.0", only: :dev},
       {:dialyxir, "~> 0.4", only: :dev},
       {:junit_formatter, "~> 2.0", only: :test},

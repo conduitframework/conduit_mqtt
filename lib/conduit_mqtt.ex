@@ -3,6 +3,7 @@ defmodule ConduitMQTT do
   MQTT adapter for Conduit.
    * `connection_opts` - Connection opts for the adapter. For example: `[server: {Tortoise.Transport.Tcp, host: 'localhost', port: 1883}]`
   For the full set of connection_opts, see the docs for underlying library [Tortiose](https://hexdocs.pm/tortoise/connecting_to_a_mqtt_broker.html#connection-handler).
+  `handler` and `client_id` are set by ConduitMQTT so don't set these yourself.
   """
   use Conduit.Adapter
   use Supervisor

@@ -56,8 +56,7 @@ defmodule MyApp.Broker do
   incoming MyApp do
     subscribe :my_subscriber, MySubscriber, from: "rooms/+/temp", qos: 1
     subscribe :my_other_subscriber, MyOtherSubscriber,
-      from: "rooms/#",
-      prefetch_size: 20
+      from: "rooms/#", qos: 0
   end
 end
 ```

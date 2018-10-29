@@ -1,7 +1,8 @@
 defmodule ConduitMQTT do
   @moduledoc """
   MQTT adapter for Conduit.
-  #TODO: put docs for connection_opts
+   * `connection_opts` - Connection opts for the adapter. For example: `[server: {Tortoise.Transport.Tcp, host: 'localhost', port: 1883}]`
+  For the full set of connection_opts, see the docs for underlying library [Tortiose](https://hexdocs.pm/tortoise/connecting_to_a_mqtt_broker.html#connection-handler).
   """
   use Conduit.Adapter
   use Supervisor
@@ -43,7 +44,6 @@ defmodule ConduitMQTT do
 
     children = [
       {ConduitMQTT.SubPool, [broker, subscribers, opts]},
-      # TODO rename to PubPool
       {ConduitMQTT.ConnPool, [broker, opts]}
     ]
 

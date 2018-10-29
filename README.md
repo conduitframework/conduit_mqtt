@@ -131,9 +131,3 @@ verneMQ  docker command for development testing:
 ``` bash
 docker run -p 1883:1883 -e "DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on" -e "DOCKER_VERNEMQ_log.console.level=debug" -it erlio/docker-vernemq:1.5.0
 ```
-
-## TODO:
-
-* Trim down some of the logging
-* Lots of TODOs
-* Keyword lists in the GenServer's should probably be maps or normal lists

@@ -31,7 +31,7 @@ defmodule ConduitMQTTTest do
     ConduitMQTT.start_link(Broker, [], @subscribers, opts)
     ConduitMQTT.start_link(OtherBroker, [], %{}, opts)
 
-    ConduitMQTT.Util.wait_until(fn ->
+    Conduit.Util.wait_until(fn ->
       ConduitMQTT.Meta.get_broker_status(Broker) == :up && ConduitMQTT.Meta.get_broker_status(OtherBroker) == :up
     end)
 
@@ -82,7 +82,7 @@ defmodule ConduitMQTTTest do
     clients = ConduitMQTT.Meta.get_clients(Broker)
     Enum.each(clients, fn [client_id, _] -> Tortoise.Connection.disconnect(client_id) end)
 
-    ConduitMQTT.Util.wait_until(fn -> ConduitMQTT.Meta.get_broker_status(Broker) == :up end)
+    Conduit.Util.wait_until(fn -> ConduitMQTT.Meta.get_broker_status(Broker) == :up end)
 
     message =
       %Conduit.Message{}

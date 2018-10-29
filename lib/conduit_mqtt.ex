@@ -6,7 +6,7 @@ defmodule ConduitMQTT do
   use Conduit.Adapter
   use Supervisor
   require Logger
-  alias ConduitMQTT.Util
+  alias Conduit.Util
   alias ConduitMQTT.Meta
 
   @type broker :: module

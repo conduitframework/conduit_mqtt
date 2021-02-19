@@ -51,7 +51,7 @@ defmodule ConduitMQTT.Mixfile do
       {:poolboy, "~> 1.5"},
       {:conduit, "~> 0.12.8"},
       {:ex_doc, "~> 0.19", only: :dev},
-      {:dialyxir, "~> 0.4", only: :dev},
+      {:dialyxir, "~> 1.1", only: :dev},
       {:junit_formatter, "~> 2.0", only: :test},
       {:excoveralls, "~> 0.5", only: :test},
       {:credo, "~> 0.7", only: [:dev, :test]}
